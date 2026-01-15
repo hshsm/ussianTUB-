@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RussianTUB | RAXICH</title>
+    <style>
+        :root { --bg: #050505; --accent: #ff0000; --neon: 0 0 15px #ff0000; }
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Arial Black', sans-serif; background: var(--bg); color: #fff; overflow: hidden; }
+
+        /* ИНТРО */
+        #intro-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: 0.8s; }
+        .intro-target { width: 130px; height: 130px; border: 4px solid var(--accent); border-radius: 40px; display: flex; align-items: center; justify-content: center; font-size: 75px; box-shadow: var(--neon); }
+        #finger { position: absolute; font-size: 70px; bottom: -120px; right: -120px; transition: 1.5s cubic-bezier(0.45, 0, 0.55, 1); }
+
+        /* ОСНОВНОЕ */
+        #main-app { height: 100vh; width: 100%; display: none; overflow-y: auto; opacity: 0; transition: 0.5s; }
+        .header { padding: 15px 5%; background: #000; border-bottom: 2px solid var(--accent); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        .btn-ui { background: rgba(255,0,0,0.1); border: 2px solid var(--accent); color: #fff; padding: 10px 15px; border-radius: 20px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        #q { width: 90%; margin: 20px 5%; padding: 18px; border-radius: 40px; border: 2px solid var(--accent); background: #000; color: #fff; text-align: center; }
+
+        /* КАРТОЧКИ */
+        .content { padding: 0 5% 100px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .v-card { background: #111; border-radius: 20px; overflow: hidden; border: 1px solid #222; transition: 0.3s; opacity: 0; transform: translateY(20px); }
+        .v-card.show { opacity: 1; transform: translateY(0); }
+
+        /* МОДАЛКИ */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; backdrop-filter: blur(5px); }
+        .modal.active { display: flex; opacity: 1; }
+        .modal-box { background: #000; padding: 30px; border-radius: 35px; border: 2px solid var(--accent); text-align: center; width: 85%; box-shadow: var(--neon); }
+
+        /* ЛОГОТИП ПОДДЕРЖКИ */
+        .support-icon { width: 80px; height: 80px; background: rgba(255,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; border: 2px solid var(--accent); box-shadow: var(--neon); }
+        .support-icon svg { width: 45px; height: 45px; fill: white; }
+
+        /* КНОПКИ ДЕЙСТВИЯ */
+        .action-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border-radius: 25px; border: none; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        .btn-play { background: #fff; color: #000; }
+        .btn-fs { background: var(--accent); color: #fff; box-shadow: 0 0 10px red; }
+        .btn-dl { background: #111; color: #00ff00; border: 1px solid #00ff00; }
+
+        /* ПЛЕЕР */
+        #player { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #video-con { width: 100%; aspect-ratio: 16/9; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .close-p { margin-top: 20px; background: var(--accent); color: white; border: none; padding: 12px 35px; border-radius: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <div class="intro-target" id="logo">R</div>
+        <div id="finger">👆</div>
+    </div>
+
+    <div id="main-app">
+        <div class="header">
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:30px; height:30px; background:red; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:bold;">R</div><span>RussianTUB</span></div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-ui" onclick="openM('m-supp')">ПОДДЕРЖКА</button>
+                <button class="btn-ui" onclick="openM('m-auth')">АВТОР</button>
+            </div>
+        </div>
+        <input type="text" id="q" placeholder="ПОИСК..." onkeydown="if(event.key==='Enter') search(this.value)">
+        <div class="content" id="list"></div>
+    </div>
+
+    <div id="m-choice" class="modal" onclick="closeM('m-choice')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 id="video-title" style="font-size:14px; margin-bottom:20px; color:#ccc;">Действие</h3>
+            <button class="action-btn btn-play" id="play-normal">Плеер</button>
+            <button class="action-btn btn-fs" id="play-fs">НА ВЕСЬ ЭКРАН</button>
+            <button class="action-btn btn-dl" id="download-v">СКАЧАТЬ</button>
+        </div>
+    </div>
+
+    <div id="m-supp" class="modal" onclick="closeM('m-supp')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="support-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12v5c0 1.1.9 2 2 2h3v-8H4v-2c0-4.41 3.59-8 8-8s8 3.59 8 8v2h-3v8h3c1.1 0 2-.9 2-2v-5c0-5.52-4.48-10-10-10zM12 20c-4.41 0-8-3.59-8-8"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </div>
+            <h3 style="margin:0; color:red;">ПОДДЕРЖКА</h3>
+            <p style="font-size:13px; color:#ccc; margin:15px 0;">Возникли вопросы? Наш бот всегда на связи.</p>
+            <a href="https://t.me/RussianTUBSupport_bot" style="display:block; padding:15px; background:red; color:#fff; border-radius:25px; text-decoration:none; font-weight:bold; box-shadow: var(--neon);">ОТКРЫТЬ ТЕЛЕГРАМ</a>
+        </div>
+    </div>
+
+    <div id="m-auth" class="modal" onclick="closeM('m-auth')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div style="width:60px; height:60px; border:2px solid red; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px; font-size:25px; color:red;">R</div>
+            <h2>RAXICH</h2>
+            <p style="font-size:13px; color:#ccc;">Мне 14 лет. Я дал отпор РКН. Создатель RussianTUB.</p>
+            <a href="https://t.me/RussianTUB" style="display:block; padding:12px; background:#fff; color:#000; border-radius:20px; text-decoration:none; margin-top:10px; font-weight:bold;">КАНАЛ</a>
+        </div>
+    </div>
+
+    <div id="player">
+        <div id="video-con"></div>
+        <button class="close-p" onclick="closeP()">ЗАКРЫТЬ</button>
+    </div>
+
+    <script>
+        const API_KEY = "AIzaSyDeYqRD" + "Ho-VVwyfwjvf" + "Oe5uHd20dw8ZdKo";
+        let isStarted = false;
+
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('finger').style.transform = "translate(-45vw, -45vh)";
+                setTimeout(() => {
+                    document.getElementById('logo').style.background = "rgba(255,0,0,0.3)";
+                    setTimeout(() => startApp(), 400);
+                }, 1500);
+            }, 500);
+        };
+
+        function startApp() {
+            if(isStarted) return; isStarted = true;
+            document.getElementById('intro-screen').style.transform = "translateY(-100%)";
+            document.getElementById('main-app').style.display = "block";
+            setTimeout(() => { document.getElementById('main-app').style.opacity = "1"; search('Тренды'); }, 100);
+        }
+
+        async function search(q) {
+            try {
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(q)}&type=video&key=${API_KEY}`);
+                const data = await res.json();
+                document.getElementById('list').innerHTML = data.items.map(v => `
+                    <div class="v-card" onclick="showChoice('${v.id.videoId}', '${v.snippet.title.replace(/'/g, "")}')">
+                        <img src="${v.snippet.thumbnails.high.url}" style="width:100%">
+                        <div style="padding:10px; font-size:11px; font-weight:bold;">${v.snippet.title}</div>
+                    </div>`).join('');
+                setTimeout(() => { document.querySelectorAll('.v-card').forEach((c, i) => { setTimeout(() => c.classList.add('show'), i * 50); }); }, 100);
+            } catch(e) {}
+        }
+
+        function showChoice(id, title) {
+            document.getElementById('video-title').innerText = title;
+            openM('m-choice');
+            document.getElementById('play-normal').onclick = () => { closeM('m-choice'); playV(id, false); };
+            document.getElementById('play-fs').onclick = () => { closeM('m-choice'); playV(id, true); };
+            document.getElementById('download-v').onclick = () => { window.open(`https://ssyoutube.com/watch?v=${id}`, '_blank'); };
+        }
+
+        function playV(id, isFull) {
+            document.getElementById('player').style.display = 'flex';
+            const fsParam = isFull ? "&fs=1" : "&fs=0";
+            document.getElementById('video-con').innerHTML = `<iframe id="vf" src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&vq=hd720${fsParam}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+            if(isFull) {
+                setTimeout(() => {
+                    const f = document.getElementById('vf');
+                    if (f.requestFullscreen) f.requestFullscreen();
+                    else if (f.webkitRequestFullscreen) f.webkitRequestFullscreen();
+                }, 800);
+            }
+        }
+
+        function closeP() { document.getElementById('player').style.display = 'none'; document.getElementById('video-con').innerHTML = ''; }
+        function openM(id) { document.getElementById(id).style.display = 'flex'; setTimeout(() => document.getElementById(id).classList.add('active'), 10); }
+        function closeM(id) { document.getElementById(id).classList.remove('active'); setTimeout(() => document.getElementById(id).style.display = 'none', 300); }
+    </script>
+</body>
+</html>
