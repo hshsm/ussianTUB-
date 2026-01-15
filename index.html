@@ -3,20 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>RussianTUB v2.1</title>
+    <title>RussianTUB</title>
     <style>
         body { margin:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; }
         #app { height:100vh; overflow-y:auto; padding:10px; display:block; }
         
-        /* СТИЛЬ УВЕДОМЛЕНИЙ */
-        #news-bar { background: linear-gradient(90deg, #ff0000, #990000); color: #fff; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-size: 13px; font-weight: bold; text-align: center; box-shadow: 0 0 10px rgba(255,0,0,0.5); display: block; border: 1px solid #fff; }
+        /* УВЕДОМЛЕНИЯ */
+        #news-bar { 
+            background: red; 
+            color: #fff; 
+            padding: 12px; 
+            border-radius: 15px; 
+            margin-bottom: 15px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            text-align: center; 
+            display: block; 
+            border: 2px solid #fff;
+        }
 
         input { width:100%; padding:15px; border-radius:25px; border:1px solid red; background:#111; color:#fff; margin-bottom:15px; box-sizing:border-box; }
         .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding-bottom:100px; }
         .v-card { background:#111; border-radius:12px; overflow:hidden; border:1px solid #222; }
         .v-card img { width:100%; display:block; }
+        
         #player { position:fixed; inset:0; background:#000; z-index:100; display:none; flex-direction:column; }
-        #video-placeholder { width:100%; aspect-ratio:16/9; background:#000; }
+        /* Плеер на весь экран */
+        iframe { width:100%; aspect-ratio:16/9; border:none; background:#000; }
         .btns { display:flex; flex-direction:column; padding:10px; gap:10px; }
         .btn { padding:15px; background:red; border:none; border-radius:20px; color:#fff; font-weight:bold; }
     </style>
@@ -25,7 +38,7 @@
 
     <div id="app">
         <div id="news-bar" onclick="this.style.display='none'">
-            📢 НОВОСТЬ: Патч v2.1 применился! Ошибки 500 и 505 исправлены. (Нажми, чтобы скрыть)
+            📢 RussianTUB: Смотрим БЕЗ VPN! Если тупит — жми еще раз.
         </div>
 
         <input type="text" id="srch" placeholder="Поиск видео...">
@@ -33,65 +46,47 @@
     </div>
 
     <div id="player">
-        <div id="video-placeholder"></div>
+        <iframe id="yt" src="" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
         <div class="btns">
             <button class="btn" onclick="clsV()">ЗАКРЫТЬ</button>
             <button class="btn" style="background:#222; color:#0f0;" id="dlB">СКАЧАТЬ</button>
         </div>
     </div>
 
-    <script src="https://www.youtube.com/iframe_api"></script>
-
     <script>
         const _a = "QUl6YVN5RGVZxVJEIEhvLVZ3eWZ3anZmIE9lNXVIZTIwZHc4WmRLbw==";
         const _u = "aHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20veW91dHViZS92My9zZWFyY2g/cGFydD1zbmlwcGV0Jm1heFJlc3VsdHM9MTYmdHlwZT12aWRlbw==";
-
-        const clean = (s) => s.replace(/\s/g, '');
-        const API = atob(clean(_a));
-        const URL = atob(clean(_u));
         
-        let player;
+        const API = atob(_a.replace(/\s/g,''));
+        const URL = atob(_u.replace(/\s/g,''));
 
         async function srch(q) {
-            const resGrid = document.getElementById('res');
             try {
                 const r = await fetch(`${URL}&q=${encodeURIComponent(q)}&key=${API}`);
-                if (!r.ok) {
-                    resGrid.innerHTML = `<div style="grid-column:1/3;text-align:center;padding:20px;color:red;">⚠️ Ошибка 500. Подождите 1 минуту.</div>`;
-                    return;
-                }
                 const d = await r.json();
-                resGrid.innerHTML = d.items.map(i => `
+                document.getElementById('res').innerHTML = d.items.map(i => `
                     <div class="v-card" onclick="openV('${i.id.videoId}')">
                         <img src="${i.snippet.thumbnails.medium.url}">
                         <div style="padding:8px; font-size:11px;">${i.snippet.title.slice(0,40)}...</div>
                     </div>`).join('');
-            } catch(e) { console.log("Search error"); }
+            } catch(e) { }
         }
 
         document.getElementById('srch').onkeydown = (e) => { if(e.key === 'Enter') srch(e.target.value); };
 
         function openV(id) {
             document.getElementById('player').style.display = 'flex';
-            if (player && player.loadVideoById) {
-                player.loadVideoById(id);
-            } else {
-                player = new YT.Player('video-placeholder', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: id,
-                    playerVars: { 'autoplay': 1, 'rel': 0, 'modestbranding': 1 }
-                });
-            }
+            // ФИШКА ТУТ: используем зеркало nocookie для обхода замедления
+            document.getElementById('yt').src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&modestbranding=1&rel=0';
             document.getElementById('dlB').onclick = () => window.open('https://ssyoutube.com/watch?v=' + id);
         }
 
         function clsV() {
-            if (player && player.stopVideo) player.stopVideo();
             document.getElementById('player').style.display = 'none';
+            document.getElementById('yt').src = '';
         }
 
         window.onload = () => srch('Тренды');
     </script>
 </body>
-</html>        
+</html>
